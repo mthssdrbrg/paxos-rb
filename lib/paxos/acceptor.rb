@@ -12,10 +12,10 @@ class Acceptor
 			return proposal_id, @previous_id, @accepted_value
 		end
 
-		proposal_comparison = (proposal_id <=> @promised_id)
-		if proposal_comparison.nil? or proposal_comparison > 0
+		if @promised_id.nil? || proposal_id > @promised_id
 			@previous_id = @promised_id
 			@promised_id = proposal_id
+
 			return proposal_id, @previous_id, @accepted_value
 		end
 	end

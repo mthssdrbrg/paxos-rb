@@ -18,6 +18,9 @@ class Node
 		@learner.quorum_size = new_quorum_size
 	end
 
+	# Required after de-serializing a Node object to re-establish
+	# the resolution callback handler
+	# TODO: check if this is necessary for Ruby
 	def set_on_resolution_callback(&callback)
 		@on_resolution = callback
 	end

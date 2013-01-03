@@ -43,14 +43,14 @@ class Proposer
 			@next_proposal_number = proposal_id.first + 1
 		end
 
-		if leader? || proposal_id != @proposal_id || @replied.member?(acceptor_uid)
+		if leader? || (proposal_id != @proposal_id) || @replied.member?(acceptor_uid)
 			return
 		end
 
 		@replied << acceptor_uid
 
 		proposal_comparison = (previous_proposal_id <=> @accepted_id)
-		if proposal_comparison == nil || proposal_comparison > 0
+		if proposal_comparison.nil? || proposal_comparison > 0
 			@accepted_id = previous_proposal_id
 
 			unless previous_proposal_id.nil?

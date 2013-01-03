@@ -3,8 +3,9 @@ require 'spec_helper'
 module Paxos
 	describe Proposer do
 
+		let(:quorum_size) { 3 }
 		let :proposer do
-			Proposer.new('uid', 3, 'foo')
+			Proposer.new('uid', quorum_size, 'foo')
 		end
 
 		describe '#prepare' do
@@ -26,15 +27,17 @@ module Paxos
 
 		describe '#receive_promise' do
 
-			it 'empty' do
+			it 'returns proposal and value when received promises from quorum of acceptors' do
 				proposer.prepare
 
 				proposer.receive_promise('a', [1, 'uid'], nil, nil).should be_nil
 				proposer.receive_promise('b', [1, 'uid'], nil, nil).should be_nil
 				proposer.receive_promise('c', [1, 'uid'], nil, nil).should eq([[1, 'uid'], 'foo'])
+
+				proposer.leader?.should be_true
 			end
 
-			it 'ignore' do
+			it 'ignores promise with wrong proposal' do
 				proposer.prepare
 
 				proposer.receive_promise('a', [1, 'uid'], nil, nil).should be_nil
@@ -42,7 +45,7 @@ module Paxos
 				proposer.receive_promise('c', [2, 'uid'], nil, nil).should be_nil
 			end
 
-			it 'single' do
+			it 'returns newly proposed value when received promises from quorum of acceptors' do
 				proposer.prepare
 				proposer.prepare
 
@@ -51,7 +54,7 @@ module Paxos
 				proposer.receive_promise('c', [2, 'uid'], nil, nil).should eq([[2, 'uid'], 'bar'])
 			end
 
-			it 'multi' do
+			it 'correctly handles multiple promises' do
 				proposer.receive_promise('a', [5, 'other'], nil, nil)
 				proposer.prepare
 
@@ -60,7 +63,7 @@ module Paxos
 				proposer.receive_promise('c', [6, 'uid'], 2, 'def').should eq([[6, 'uid'], 'bar'])
 			end
 
-			it 'duplicate' do
+			it 'correctly handles duplicated promises' do
 				proposer.receive_promise('a', [5, 'other'], nil, nil)
 				proposer.prepare
 
@@ -70,7 +73,7 @@ module Paxos
 				proposer.receive_promise('c', [6, 'uid'], 2, 'def').should eq([[6, 'uid'], 'bar'])
 			end
 
-			it 'old' do
+			it 'correctly handles old / "expired" promises' do
 				proposer.receive_promise('a', [5, 'other'], nil, nil)
 				proposer.prepare
 

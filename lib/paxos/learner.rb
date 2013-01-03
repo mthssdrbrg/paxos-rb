@@ -1,8 +1,8 @@
 class Learner
 
 	def initialize(quorum_size)
-		@proposals = {}
-		@acceptors = {}
+		@proposals = {} # maps proposal_id => [accept_count, retain_count, value]
+		@acceptors = {} # maps acceptor_uid => last_accepted_proposal_id
 		@quorum_size = quorum_size
 
 		@accepted_value = nil
@@ -23,9 +23,10 @@ class Learner
 
 		@acceptors[acceptor_uid] = proposal_id
 
-		if last_proposal != nil
+		unless last_proposal.nil? # extract to own method when a proper method name is found
 			old_proposal = @proposals[last_proposal]
 			old_proposal[1] -= 1
+
 			if old_proposal[1].zero?
 				@proposals.delete(last_proposal)
 			end
@@ -35,14 +36,14 @@ class Learner
 			@proposals[proposal_id] = [0, 0, accepted_value]
 		end
 
-		t = @proposals[proposal_id]
+		target = @proposals[proposal_id]
 
-		raise ValueMismatchError, 'for single proposal' unless accepted_value == t[2]
+		raise ValueMismatchError, 'for single proposal' unless accepted_value == target[2]
 
-		t[0] += 1
-		t[1] += 1
+		target[0] += 1
+		target[1] += 1
 
-		if t.first == @quorum_size
+		if target.first == @quorum_size # extract to own method
 			@accepted_value = accepted_value
 			@accepted_proposal_id = proposal_id
 			@proposals.clear && @proposals = nil

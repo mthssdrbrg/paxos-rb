@@ -9,52 +9,55 @@ module Paxos
 
 		describe '#receive_prepare' do
 
-			it 'first' do
+			it 'returns correct values' do
 				acceptor.receive_prepare(1).should eq([1, nil, nil])
 			end
 
-			it 'no_value_two' do
+			it 'returns correct promised_id and previous_id second time' do
 				acceptor.receive_prepare(1)
 				acceptor.receive_prepare(2).should eq([2, 1, nil])
 			end
 
-			it 'ignores old proposal' do # no value ignore old
+			it 'ignores old proposal_id' do
 				acceptor.receive_prepare(2)
 				acceptor.receive_prepare(1).should be_nil
 			end
+		end
 
-			it 'value two' do
+		describe '#receive_accept_request' do
+
+			it 'returns accepted value and correct promised_id and previous_id' do
 				acceptor.receive_prepare(1)
 				acceptor.receive_accept_request(1, 'foo')
 				acceptor.receive_prepare(2).should eq([2, 1, 'foo'])
 			end
 
-			it 'value ignore old' do
+			it 'ignores old proposal id' do
 				acceptor.receive_prepare(2)
 				acceptor.receive_accept_request(2, 'foo')
 				acceptor.receive_prepare(1).should be_nil
 			end
 
-			it 'handles prepared accept' do # prepared accept
+			it 'handles prepared accept request' do
 				acceptor.receive_prepare(1)
 				acceptor.receive_accept_request(1, 'foo').should eq([1, 'foo'])
 			end
 
-			it 'handles unprepared accept' do # unprepared accept
+			it 'handles unprepared accept request' do
 				acceptor.receive_accept_request(1, 'foo').should eq([1, 'foo'])
 			end
 
-			it 'ignores accept with old proposal id' do # ignored accept
+			it 'ignores accept request with old proposal id' do
 				acceptor.receive_prepare(5)
 				acceptor.receive_accept_request(1, 'foo').should be_nil
 			end
 
-			it 'handles duplicated accepts' do # duplicte accept
+			it 'handles duplicated accept requests' do
 				acceptor.receive_accept_request(1, 'foo').should eq([1, 'foo'])
 				acceptor.receive_accept_request(1, 'foo').should eq([1, 'foo'])
 			end
 
-			it 'ignore old proposal after accept' do # ignore after accept
+			it 'ignores old proposal after accept' do
 				acceptor.receive_accept_request(5, 'foo')
 				acceptor.receive_prepare(1).should be_nil
 			end
