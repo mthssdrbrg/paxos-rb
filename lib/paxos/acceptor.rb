@@ -21,9 +21,7 @@ class Acceptor
 	end
 
 	def receive_accept_request(proposal_id, value)
-		# if proposal_id >= @promised_id
-		proposal_comparison = (proposal_id <=> @promised_id)
-		if proposal_comparison.nil? or proposal_comparison >= 0
+		if @promised_id.nil? || proposal_id >= @promised_id
 			@accepted_value = value
 			@promised_id = proposal_id
 			return proposal_id, @accepted_value
