@@ -34,14 +34,20 @@ class MultiPaxos
 		@node.proposer.leader?
 	end
 
-	def self.receive_action(*action_names, options = {})
+	def self.receive_action(*arguments)
+		if arguments.last.is_a?(Hash)
+			options = arguments.pop
+		else
+			options = {}
+		end
+
 		options = { :durable => true }.merge(options)
 
-		action_names.each do |action_name|
+		arguments.each do |action_name|
 			receive_action_name = "receive_#{action_name}".to_sym
 
-			define_method(receive_action_name) do |args|
-				instance_number = args.pop
+			define_method(receive_action_name) do |*args|
+				instance_number = args.shift
 
 				if instance_number == @instance_number
 					result = @node.send(action_name.to_sym, *args)
@@ -54,9 +60,7 @@ class MultiPaxos
 
 	# Node (receive) actions
 
-	receive_action :promise
-	receive_action :prepare
-	receive_action :accept_request
+	receive_action :promise, :prepare, :accept_request
 	receive_action :accepted, :durable => false
 
 	def proposal=(instance_number, value)
@@ -105,7 +109,7 @@ class MultiPaxos
 
 	def next_instance(leader_uid = nil)
 		@instance_number += 1
-		@node = @node_factory(@uid, leader_uid, @quorum_size, @on_resolution)
+		@node = @node_factory.create(@uid, leader_uid, @quorum_size, @on_resolution)
 	end
 
 	def on_resolution(proposal_id, value)
