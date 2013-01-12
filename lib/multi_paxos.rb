@@ -1,7 +1,7 @@
 require 'paxos'
 
 class MultiPaxos
-
+	
 	class InvalidInstanceNumberError < ArgumentError ; end
 
 	def initialize(node_factory)
