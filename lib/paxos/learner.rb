@@ -23,14 +23,7 @@ class Learner
 
 		@acceptors[acceptor_uid] = proposal_id
 
-		unless last_proposal.nil? # extract to own method when a proper method name is found
-			old_proposal = @proposals[last_proposal]
-			old_proposal[1] -= 1
-
-			if old_proposal[1].zero?
-				@proposals.delete(last_proposal)
-			end
-		end
+		decrement_retain_count(last_proposal) unless last_proposal.nil?
 
 		unless @proposals.include?(proposal_id)
 			@proposals[proposal_id] = [0, 0, accepted_value]
@@ -44,13 +37,28 @@ class Learner
 		target[1] += 1
 
 		if target.first == @quorum_size # extract to own method
-			@accepted_value = accepted_value
-			@accepted_proposal_id = proposal_id
-			@proposals.clear && @proposals = nil
-			@acceptors.clear && @acceptors = nil
-			@complete = true
+			reached_consensus(accepted_value, proposal_id)
 		end
 
 		@accepted_value
+	end
+
+	private
+
+	def reached_consensus(accepted_value, proposal_id)
+		@accepted_value = accepted_value
+		@accepted_proposal_id = proposal_id
+		@proposals.clear && @proposals = nil
+		@acceptors.clear && @acceptors = nil
+		@complete = true
+	end
+
+	def decrement_retain_count(proposal_id)
+		old_proposal = @proposals[proposal_id]
+		old_proposal[1] -= 1
+
+		if old_proposal[1].zero?
+			@proposals.delete(proposal_id)
+		end
 	end
 end
