@@ -1,7 +1,7 @@
 require 'paxos'
 
 class MultiPaxos
-	
+
 	class InvalidInstanceNumberError < ArgumentError ; end
 
 	def initialize(node_factory)
@@ -34,11 +34,13 @@ class MultiPaxos
 		@node.proposer.leader?
 	end
 
-	def self.node_action(*action_names, options = {})
+	def self.receive_action(*action_names, options = {})
 		options = { :durable => true }.merge(options)
 
 		action_names.each do |action_name|
-			define_method(action_name.to_sym) do |args|
+			receive_action_name = "receive_#{action_name}".to_sym
+
+			define_method(receive_action_name) do |args|
 				instance_number = args.pop
 
 				if instance_number == @instance_number
@@ -50,12 +52,12 @@ class MultiPaxos
 		end
 	end
 
-	# Node actions
+	# Node (receive) actions
 
-	node_action :receive_promise
-	node_action :receive_prepare
-	node_action :receive_accept_request
-	node_action :receive_accepted, :durable => false
+	receive_action :promise
+	receive_action :prepare
+	receive_action :accept_request
+	receive_action :accepted, :durable => false
 
 	def proposal=(instance_number, value)
 		raise InvalidInstanceNumberError if @instance_number != instance_number
@@ -63,9 +65,9 @@ class MultiPaxos
 	end
 
 	def prepare
-		r = @node.prepare
+		result = @node.prepare
 		# Save durable state
-		r
+		result
 	end
 
 	# def receive_promise(instance_number, acceptor_uid, proposal_id, previous_proposal_id, previous_proposal_value)
