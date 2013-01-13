@@ -1,5 +1,5 @@
 module Paxos
-	module Acceptor
+	class Acceptor
 
 		def initialize(messenger)
 			@messenger 			= messenger
@@ -11,7 +11,7 @@ module Paxos
 		end
 
 		def receive_prepare(from_uid, proposal_id)
-			if (proposal_id <=> @promised_id) == 0
+			if proposal_id == @promised_id
 				# Duplicate accepted proposal
 				@messenger.send_promise(from_uid, proposal_id, @previous_id, @accepted_value)
 			elsif @promised_id.nil? || proposal_id > @promised_id
