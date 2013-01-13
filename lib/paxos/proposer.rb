@@ -37,7 +37,7 @@ module Paxos
 			if increment_proposal_number
 				@leader = false
 				@promises_received = Set.new
-				@proposal_id = (@next_proposal_number, @node_uid)
+				@proposal_id = [@next_proposal_number, @node_uid]
 
 				@next_proposal_number += 1
 			end
@@ -67,20 +67,21 @@ module Paxos
 		end
 
 		def receive_promise(from_uid, proposal_id, previous_accepted_id, previous_accepted_value)
-			if proposal_id > [@next_proposal_number - 1, @node_uid]
+			if (proposal_id <=> [@next_proposal_number - 1, @node_uid]) > 0
 				@next_proposal_number = proposal_id.first + 1
 			end
 
-			if leader? || (proposal_id != @proposal_id) || @promises_received.member?(acceptor_uid)
+			if leader? || (proposal_id != @proposal_id) || @promises_received.member?(from_uid)
 				return
 			end
 
 			@promises_received << from_uid
 
-			if @last_accepted_id.nil? || previous_accepted_id > @last_accepted_id
+			comparison = (previous_accepted_id <=> @last_accepted_id)
+			if @last_accepted_id.nil? || (!comparison.nil? && comparison > 0)
 				@last_accepted_id = previous_accepted_id
 
-				if @last_accepted_id.nil?
+				unless previous_accepted_value.nil?
 					@proposed_value = previous_accepted_value
 				end
 			end

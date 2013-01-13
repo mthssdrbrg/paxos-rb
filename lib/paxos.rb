@@ -1,3 +1,4 @@
+require 'paxos/messenger'
 require 'paxos/proposer'
 require 'paxos/acceptor'
 require 'paxos/learner'
