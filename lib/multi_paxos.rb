@@ -4,12 +4,30 @@ class MultiPaxos
 
 	class InvalidInstanceNumberError < ArgumentError ; end
 
-	def initialize(node_factory)
-		@node_factory = node_factory
-		@uid = nil
-		@quorum_size = nil
-		@instance_number = nil
-		@node = nil
+	def initialize(node_factory = nil, options = {})
+		@node_factory 		= node_factory || Paxos::NodeFactory
+		@uid 							= nil
+		@quorum_size 			= nil
+		@instance_number 	= nil
+		@node 						= nil
+
+		if options[:durable] && options[:durable][:handler]
+			@durable_handler = options[:durable][:handler]
+		end
+	end
+
+	def initialize!(node_uid, quorum_size, instance_number = 0)
+		@uid 							= node_uid
+		@quorum_size 			= quorum_size
+		@instance_number 	= instance_number - 1
+		@node 						= nil
+
+		next_instance
+		save_durable_state
+	end
+
+	def durable?
+		!!@durable_handler
 	end
 
 	def on_proposal_resolution(instance_number, value)
@@ -23,7 +41,8 @@ class MultiPaxos
 	def quorum_size=(new_size)
 		@quorum_size = new_size
 		@node.quorum_size = new_size
-		# (Save durable state)
+
+		save_durable_state
 	end
 
 	def proposed_value?
@@ -51,7 +70,7 @@ class MultiPaxos
 
 				if instance_number == @instance_number
 					result = @node.send(action_name.to_sym, *args)
-					# (Save durable state) if options[:durable] && result
+					save_durable_state if options[:durable] && result
 					result
 				end
 			end
@@ -70,7 +89,8 @@ class MultiPaxos
 
 	def prepare
 		result = @node.prepare
-		# Save durable state
+		save_durable_state
+
 		result
 	end
 
@@ -109,13 +129,20 @@ class MultiPaxos
 
 	def next_instance(leader_uid = nil)
 		@instance_number += 1
-		@node = @node_factory.create(@uid, leader_uid, @quorum_size, @on_resolution)
+		@node = @node_factory.create!(@uid, leader_uid, @quorum_size, @on_resolution)
 	end
 
 	def on_resolution(proposal_id, value)
 		current_instance_number = @instance_number
 		next_instance(proposal_id[1])
-		# Save durable state before #on_proposal_resolution
+
+		save_durable_state
 		on_proposal_resolution(current_instance_number, value)
+	end
+
+	def save_durable_state
+		if durable?
+			# TODO: implement
+		end
 	end
 end

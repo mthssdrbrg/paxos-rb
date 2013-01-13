@@ -4,7 +4,7 @@ describe MultiPaxos do
 
 	describe '#receive_action' do
 
-		it 'generates correct (proxy) methods' do
+		it 'defines desired proxy methods' do
 			multi_paxos = MultiPaxos.new(Object.new)
 
 			multi_paxos.should respond_to(:receive_promise)
