@@ -1,28 +1,36 @@
 module Paxos
 	class Learner
 
-		def initialize(quorum_size)
-			@proposals = {} # maps proposal_id => [accept_count, retain_count, value]
-			@acceptors = {} # maps acceptor_uid => last_accepted_proposal_id
-			@quorum_size = quorum_size
+		attr_accessor :quorum_size
 
-			@accepted_value = nil
-			@accepted_proposal_id = nil
-			@complete = false
+		def initialize(quorum_size, messenger)
+			@messenger 				 = messenger
+			@quorum_size 			 = quorum_size
+
+			@proposals 				 = {} # maps proposal_id => [accept_count, retain_count, value]
+			@acceptors 				 = {} # maps acceptor_uid => last_accepted_proposal_id
+
+			@final_value 			 = nil
+			@final_proposal_id = nil
 		end
 
 		def complete?
-			@complete
+			!!@final_proposal_id
 		end
 
-		def receive_accepted(acceptor_uid, proposal_id, accepted_value)
-			return @accepted_value unless @accepted_value.nil?
+		def receive_accepted(from_uid, proposal_id, accepted_value)
+			return unless @final_value.nil?
 
-			last_proposal = @acceptors[acceptor_uid]
+			if @proposals.nil?
+				@proposals = {}
+				@acceptors = {}
+			end
 
-			return if !last_proposal.nil? && !((proposal_id <=> last_proposal) > 0) # old message
+			last_proposal = @acceptors[from_uid]
 
-			@acceptors[acceptor_uid] = proposal_id
+			return if !last_proposal.nil? && !((proposal_id <=> last_proposal) > 0) # ugh, old message
+
+			@acceptors[from_uid] = proposal_id
 
 			decrement_retain_count(last_proposal) unless last_proposal.nil?
 
@@ -37,8 +45,8 @@ module Paxos
 			target[0] += 1
 			target[1] += 1
 
-			if target.first == @quorum_size # extract to own method
-				reached_consensus(accepted_value, proposal_id)
+			if target.first == @quorum_size
+				reached_consensus(proposal_id, accepted_value)
 			end
 
 			@accepted_value
@@ -46,12 +54,13 @@ module Paxos
 
 		private
 
-		def reached_consensus(accepted_value, proposal_id)
-			@accepted_value = accepted_value
-			@accepted_proposal_id = proposal_id
+		def reached_consensus(proposal_id, accepted_value)
+			@final_value = accepted_value
+			@final_proposal_id = proposal_id
 			@proposals.clear && @proposals = nil
 			@acceptors.clear && @acceptors = nil
-			@complete = true
+
+			@messenger.on_resolution(proposal_id, accepted_value)
 		end
 
 		def decrement_retain_count(proposal_id)

@@ -3,15 +3,19 @@ require 'set'
 module Paxos
 	class Proposer
 
-		def initialize(proposer_uid, quorum_size, proposed_value = nil)
-			@proposer_uid = proposer_uid
-			@proposal_id = nil
+		attr_accessor :quorum_size
+
+		def initialize(node_uid, quorum_size, messenger)
+			@messenger 						= messenger
+			@node_uid			 				= node_uid
+			@quorum_size 					= quorum_size
+
+			@proposed_value				= nil
+			@proposal_id 					= nil
+			@last_accepted_id			= nil
 			@next_proposal_number = 1
-			@accepted_id = nil
-			@replied = Set.new
-			@value = proposed_value
-			@quorum_size = quorum_size
-			@leader = false
+			@promises_received		= Set.new
+			@leader 							= false
 		end
 
 		def leader?
@@ -19,49 +23,76 @@ module Paxos
 		end
 
 		def proposal=(value)
-			@value ||= value
-		end
+			if @proposed_value.nil?
+				@proposed_value = value
 
-		def prepare
-			@leader = false
-			@replied = Set.new
-
-			@proposal_id = [@next_proposal_number, @proposer_uid]
-
-			@next_proposal_number += 1
-
-			@proposal_id
-		end
-
-		def observe_proposal(proposal_id)
-			if proposal_id >= [@next_proposal_number, @proposal_uid]
-				@next_proposal_number = proposal_id.first + 1
+				if leader?
+					@messenger.send_accept(@proposal_id, value)
+				end
 			end
 		end
 
-		def receive_promise(acceptor_uid, proposal_id, previous_proposal_id, previous_proposal_value)
-			if (proposal_id <=> [@next_proposal_number, @proposer_uid]) >= 0
+		def prepare(increment_proposal_number = true)
+
+			if increment_proposal_number
+				@leader = false
+				@promises_received = Set.new
+				@proposal_id = (@next_proposal_number, @node_uid)
+
+				@next_proposal_number += 1
+			end
+
+			@messenger.send_prepare(@proposal_id)
+		end
+
+		def observe_proposal(from_uid, proposal_id)
+			if from_uid != @node_uid
+				if proposal_id >= [@next_proposal_number, @proposal_uid]
+					@next_proposal_number = proposal_id.first + 1
+				end
+			end
+		end
+
+		def receive_prepare_nack(from_uid, proposal_id, promised_id)
+			observe_proposal(from_uid, promised_id)
+		end
+
+		def receive_accept_nack(from_uid, proposal_id, promised_id)
+		end
+
+		def resend_accept
+			if leader? && proposed_value?
+				@messenger.send_accept(@proposal_id, @proposed_value)
+			end
+		end
+
+		def receive_promise(from_uid, proposal_id, previous_accepted_id, previous_accepted_value)
+			if proposal_id > [@next_proposal_number - 1, @node_uid]
 				@next_proposal_number = proposal_id.first + 1
 			end
 
-			if leader? || (proposal_id != @proposal_id) || @replied.member?(acceptor_uid)
+			if leader? || (proposal_id != @proposal_id) || @promises_received.member?(acceptor_uid)
 				return
 			end
 
-			@replied << acceptor_uid
+			@promises_received << from_uid
 
-			proposal_comparison = (previous_proposal_id <=> @accepted_id)
-			if proposal_comparison.nil? || proposal_comparison > 0
-				@accepted_id = previous_proposal_id
+			if @last_accepted_id.nil? || previous_accepted_id > @last_accepted_id
+				@last_accepted_id = previous_accepted_id
 
-				unless previous_proposal_id.nil?
-					@value = previous_proposal_value
+				if @last_accepted_id.nil?
+					@proposed_value = previous_accepted_value
 				end
 			end
 
-			if @replied.length == @quorum_size
+			if @promises_received.length == @quorum_size
 				@leader = true
-				return @proposal_id, @value
+
+				@messenger.on_leadership_acquired
+
+				unless @proposed_value.nil?
+					@messenger.send_accept(@proposal_id, @proposed_value)
+				end
 			end
 		end
 	end

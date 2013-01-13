@@ -1,10 +1,10 @@
 paxos-rb
 ====================
 
-Ruby clone of (Plain Paxos)[github.com/link/to/repo] implementation by Tom Cocagne.
+Ruby clone of [Plain Paxos](https://github.com/cocagne/paxos) implementation by Tom Cocagne.
 
 Implementation
-==============
+--------------
 
 paxos/
 ------
