@@ -2,6 +2,7 @@ module Paxos
 	class Learner
 
 		attr_accessor :quorum_size
+		attr_reader :final_value, :final_proposal_id
 
 		def initialize(quorum_size, messenger)
 			@messenger 				 = messenger
