@@ -11,7 +11,7 @@ module Paxos
 
 		context 'receiving accepted from quorum of acceptors' do
 
-			it '#basic_resolution' do
+			it 'sets correct final values' do
 				messenger.should_receive(:on_resolution).with([1, 'A'], 'foo').once
 
 				learner.receive_accepted('A', [1, 'A'], 'foo')
@@ -24,13 +24,12 @@ module Paxos
 				learner.final_proposal_id.should eq([1, 'A'])
 			end
 
-			it '#ignore_after_resolution' do
+			it 'ignores proposals from same node after acceptance' do
 				messenger.should_receive(:on_resolution).with([1, 'A'], 'foo').once
 
 				learner.receive_accepted('A', [1, 'A'], 'foo')
 				learner.final_value.should be_nil
 				learner.complete?.should_not be_true
-
 				learner.receive_accepted('B', [1, 'A'], 'foo')
 
 				learner.complete?.should be_true
@@ -45,7 +44,7 @@ module Paxos
 				learner.final_proposal_id.should eq([1, 'A'])
 			end
 
-			it '#ignore_duplicated_messages' do
+			it 'ignores duplicated proposals' do
 				messenger.should_receive(:on_resolution).with([1, 'A'], 'foo').once
 
 				learner.receive_accepted('A', [1, 'A'], 'foo')
@@ -59,7 +58,7 @@ module Paxos
 				learner.final_proposal_id.should eq([1, 'A'])
 			end
 
-			it '#ignore_old_messages' do
+			it 'ignores old proposals' do
 				messenger.should_receive(:on_resolution).with([5, 'A'], 'foo').once
 
 				learner.receive_accepted('A', [5, 'A'], 'foo')
@@ -73,7 +72,7 @@ module Paxos
 				learner.final_proposal_id.should eq([5, 'A'])
 			end
 
-			it '#overwrite_old_messages' do
+			it 'overwrites proposals with higher id from same node' do
 				messenger.should_receive(:on_resolution).with([5, 'A'], 'foo').once
 
 				learner.receive_accepted('A', [1, 'A'], 'bar')

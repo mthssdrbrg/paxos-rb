@@ -1,6 +1,8 @@
 module Paxos
 	class Acceptor
 
+		attr_reader :promised_id, :accepted_value, :accepted_id, :previous_id
+
 		def initialize(messenger)
 			@messenger 			= messenger
 
