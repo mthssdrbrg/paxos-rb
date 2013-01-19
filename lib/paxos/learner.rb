@@ -49,8 +49,6 @@ module Paxos
 			if target.first == @quorum_size
 				reached_consensus(proposal_id, accepted_value)
 			end
-
-			@accepted_value
 		end
 
 		private
