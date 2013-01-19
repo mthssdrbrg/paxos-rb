@@ -4,7 +4,7 @@ module Paxos
 
   describe ProposalId do
 
-    context '<=>' do
+    describe '<=>' do
 
       let(:proposal_id) { ProposalId.new(0, '0') }
       let(:other_proposal_id) { ProposalId.new(1, '1') }
